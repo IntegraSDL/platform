@@ -1,0 +1,13 @@
+http://<path to gitea> {
+  route /* {
+    reverse_proxy http://gitea:3000
+  }
+}
+
+http://<Drone URL> {
+  route /* {
+    reverse_proxy http://drone
+  }
+}
+
+log
