@@ -1,0 +1,136 @@
+version: "3.3"
+
+services:
+
+  caddy:
+    container_name: caddy
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./container/caddy/site:/srv
+      - ./container/caddy/data:/data
+      - caddy_config:/config
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      - TZ=Europe/Moscow
+
+  gitea:
+    container_name: gitea
+    image: gitea/gitea:dev
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - ROOT_URL
+      - DB_TYPE=postgres
+      - DB_HOST=${POSTGRES_HOST}
+      - DB_NAME=${POSTGRES_DB_NAME}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWD=${POSTGRES_PASS}
+      - SKIP_TLS_VERIFY=true
+      - TZ=Europe/Moscow
+    restart: always
+    ports:
+      - "2222:22"
+    volumes:
+      - ./container/gitea-app:/data
+      - /etc/timezone:/etc/timezone:ro
+    links:
+      - caddy
+      - gitea-db
+  gitea-db:
+    container_name: gitea-db
+    image: postgres:13-alpine
+    ports:
+      - "5432:5432"
+    restart: always
+    volumes:
+      - ./container/gitea-db:/var/lib/postgresql/data
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
+      - TZ=Europe/Moscow
+
+  drone:
+    container_name: drone
+    image: drone/drone:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./container/drone:/data
+      - /etc/timezone:/etc/timezone:ro
+    restart: always
+    depends_on:
+      - gitea
+    links:
+      - gitea
+      - caddy
+    ports:
+      - "8000:80"
+    environment:
+      - DRONE_SERVER_HOST
+      - DRONE_SERVER_PROTO
+      - DRONE_AGENTS_ENABLED
+      - DRONE_GITEA_CLIENT_ID
+      - DRONE_GITEA_CLIENT_SECRET
+      - DRONE_GITEA_SERVER
+      - DRONE_GIT_ALWAYS_AUTH
+      - DRONE_TLS_AUTOCERT
+      - DRONE_RPC_SECRET
+      - DRONE_RUNNER_NETWORKS
+      - TZ=Europe/Moscow
+      - DRONE_LOGS_DEBUG=${DRONE_LOGS_DEBUG}
+
+  drone-runner-docker:
+    container_name: drone-runner-docker
+    image: drone/drone-runner-docker:latest
+    restart: always
+    depends_on:
+      - drone
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/docker:/etc/docker
+    links:
+      - caddy
+      - drone
+      - gitea
+    ports:
+      - 3000:3000
+    environment:
+      - DRONE_RPC_HOST=${DRONE_RPC_HOST}
+      - DRONE_RPC_PROTO=${DRONE_RPC_PROTO}
+      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}
+      - DRONE_RUNNER_NAME=drone-runner-docker
+      - DRONE_UI_USERNAME=${DRONE_UI_USERNAME}
+      - DRONE_UI_PASSWORD=${DRONE_UI_PASSWORD}
+      - DRONE_RUNNER_NETWORKS
+      - TZ=Europe/Moscow
+      - DRONE_DEBUG=${DRONE_DEBUG}
+      - DRONE_TRACE=${DRONE_TRACE}
+
+  backup:
+    container_name: backup
+    image: ghcr.io/integrasdl/restic-cron:latest
+    restart: always
+    environment:
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_REPOSITORY
+      - BACKUP_DIRECTORY_PATH=/containers
+    volumes:
+      - ./container:/containers
+    depends_on:
+      - drone
+      - gitea
+      - gitea-db
+      - caddy
+volumes:
+  gitea-app:
+  gitea-db:
+  caddy_config:
+networks:
+  gitea-drone-network:
+    driver: custom-driver-1
