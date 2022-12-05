@@ -25,10 +25,10 @@ services:
       - USER_GID=1000
       - ROOT_URL
       - DB_TYPE=postgres
-      - DB_HOST=${POSTGRES_HOST}
-      - DB_NAME=${POSTGRES_DB_NAME}
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWD=${POSTGRES_PASS}
+      - DB_HOST
+      - DB_NAME
+      - DB_USER
+      - DB_PASSWD
       - SKIP_TLS_VERIFY=true
       - TZ=Europe/Moscow
     restart: always
@@ -50,9 +50,9 @@ services:
       - ./container/gitea-db:/var/lib/postgresql/data
       - /etc/timezone:/etc/timezone:ro
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASS}
-      - POSTGRES_DB=${POSTGRES_DB_NAME}
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
       - TZ=Europe/Moscow
 
   drone:
@@ -82,7 +82,7 @@ services:
       - DRONE_RPC_SECRET
       - DRONE_RUNNER_NETWORKS
       - TZ=Europe/Moscow
-      - DRONE_LOGS_DEBUG=${DRONE_LOGS_DEBUG}
+      - DRONE_LOGS_DEBUG
 
   drone-runner-docker:
     container_name: drone-runner-docker
@@ -101,23 +101,23 @@ services:
     ports:
       - 3000:3000
     environment:
-      - DRONE_RPC_HOST=${DRONE_RPC_HOST}
-      - DRONE_RPC_PROTO=${DRONE_RPC_PROTO}
-      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}
-      - DRONE_RUNNER_NAME=drone-runner-docker
-      - DRONE_UI_USERNAME=${DRONE_UI_USERNAME}
-      - DRONE_UI_PASSWORD=${DRONE_UI_PASSWORD}
+      - DRONE_RPC_HOST
+      - DRONE_RPC_PROTO
+      - DRONE_RPC_SECRET
+      - DRONE_RUNNER_NAME
+      - DRONE_UI_USERNAME
+      - DRONE_UI_PASSWORD
       - DRONE_RUNNER_NETWORKS
       - TZ=Europe/Moscow
-      - DRONE_DEBUG=${DRONE_DEBUG}
-      - DRONE_TRACE=${DRONE_TRACE}
+      - DRONE_DEBUG
+      - DRONE_TRACE
 
   backup:
     container_name: backup
     image: ghcr.io/integrasdl/restic-cron:latest
     restart: always
     environment:
-      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_PASSWORD
       - RESTIC_REPOSITORY
       - BACKUP_DIRECTORY_PATH=/containers
     volumes:
